@@ -6,18 +6,21 @@ import random
 
 from models import setup_db, Question, Category
 
-QUESTIONS_PER_PAGE = 10
+
 
 def paginate_questions(page, selections):
+
+  QUESTIONS_PER_PAGE = 10
+
   page = request.args.get('page', 1, type=int)
-  start = [page -1] * QUESTIONS_PER_PAGE
+  start = (page -1) * QUESTIONS_PER_PAGE
   end = start + QUESTIONS_PER_PAGE
 
   allSelected = []
   for  Qnts, category in selections:
     Qnts = Qnts.format()
     Qnts['category_id'] = Qnts['category']
-    Qnts['categroy'] = categroy
+    Qnts['category'] = category
     allSelected.append(Qnts)
 
   current_questions = allSelected[start:end]
@@ -51,11 +54,15 @@ def create_app(test_config=None):
   '''
   @app.route('/categories')
   def get_categories():
-    categories = Category.query.all()
-    orgnised_categories = [categories.format() for category in categories]
+    categories = []
+
+    results = Category.query.all()
+    for result in results:
+      categories.append(result.type) 
+    
     return jsonify({
       'sucess': True,
-      'cates':orgnised_categories
+      'cates':categories
     }), 200
 
 
@@ -72,25 +79,27 @@ def create_app(test_config=None):
   Clicking on the page numbers should update the questions. 
   '''
 
-  @app.route('/question')
+  @app.route('/questions')
   def retrive_questions():
 
     page = request.args.get('page', 1, type=int)
 
     questions = Question.query.join(
       Category,
-      Category.id == Question.category
+      Category.id == Question.id
     ).add_columns(Category.type).all()
 
     current_questions = paginate_questions(page, questions)
 
     categories = []
+
     results = Category.query.all()
+
     for  result in results:
       categories.append(result.type)
 
-    if len(current_questions) ==0:
-      abort(404, "Sorry no question found")
+    # if len(current_questions) ==0:
+    #   abort(404, "Sorry no question found")
 
     return jsonify({
       'sucess': True,
@@ -101,7 +110,6 @@ def create_app(test_config=None):
     }), 200
 
 
-
   '''
   @TODO: 
   Create an endpoint to DELETE question using a question ID. 
@@ -109,24 +117,19 @@ def create_app(test_config=None):
   TEST: When you click the trash icon next to a question, the question will be removed.
   This removal will persist in the database and when you refresh the page. 
   '''
-  @app.route('/question/<int:question_id>', methods=['DELETE'])
-  def delete_question(question_id):
+  @app.route('/question/<int:id>', methods=['DELETE'])
+  def delete_question(id):
 
-      question = Question.query_by(Question.id == question_id).one_or_none()
+    question = Question.query.filter_by(id=id).one_or_none()
 
-      if question is none:
-        abort(404, 'sorry question not found')
-        question.delete()
+    if question is None:
+      abort(404, 'sorry question not found')
+      question.delete()
 
-        selection = Question.query.order_by(Question.id).all()
-        current_questions= paginate_questions(page, selection)
-
-      return jsonify({
-        'success': True,
-        'deleted': question_id,
-        'message': 'Question have benn sucessfully deleted',
-        'total_questions': len(Question.query.all())
-      })
+    return jsonify({
+      'success': True,
+      'message': 'Question have benn sucessfully deleted',
+    })
 
 
   '''
@@ -154,15 +157,10 @@ def create_app(test_config=None):
       question=question, 
       difficulty=difficulty
       )
-    
-    is_valid = validator.question(question)
-    if not (is_valid is True):
-      abort(400, is_valid)
 
     question.insert()
     return jsonify({
       'success': True,
-      'created': question_id,
       'meassge':'Question successfully created'
     }), 201
 
@@ -176,38 +174,40 @@ def create_app(test_config=None):
   TEST: Search by any phrase. The questions list will update to include 
   only question that include that string within their question. 
   Try using the word "title" to start. 
-  '''
+  # '''
   @app.route('/question/search', methods=['POST'])
-  def question_search():
-    data = request.get_json()
-    new_search = data.get('new_search', None)
-
+  def question_search_by_search_term():
     page = request.args.get('page', 1, type=int)
 
+    data = request.get_json()
+
+    search_term = data.get("searchterm", None)
+
     questions = Question.query.join(
-      Category, Category.id == Question.category
-    ).add_columns(Category.type).all()
+        Category, Category.id == Question.id).add_columns(Category.type).all()
 
     current_questions = paginate_questions(page, questions)
-    
-    question_list = []
-    for qn in current_questions:
-      if new_search.lower() in question['question'].lower():
-        question_list.append(questions)
+
+    questions = []
+    for question in current_questions:
+        if search_term.lower() in question['question'].lower():
+            questions.append(question)
 
 
     categories = []
-    results = Category.query.all()
-    for result in  results:
-      categories.append(result.type)
-    
+
+    all_categories = Category.query.all()
+
+    for item in all_categories:
+        categories.append(item.type)
+
     return jsonify({
-      'sucess': True,
-      'questions': questions,
-      'total_questions': len(questions),
-      'categories':categories,
-      'Avaliabe_category':None
-    }), 200
+        'success': True,
+        'questions': questions,
+        'total_questions': len(questions),
+        'categories': categories,
+        'current_category': None
+    }), 201
 
     
   '''
@@ -217,20 +217,22 @@ def create_app(test_config=None):
   categories in the left column will cause only questions of that 
   category to be shown. 
   '''
-  @app.route('/categories/<int:category_id>/questions')
-  def retrive_question_by_category(category_id):
+  @app.route('/categories/<int:id>/questions')
+  def retrive_question_by_category(id):
 
-    questions = Question.query.order_by(category_id=Category.id).join(
+    page = request.args.get('page', 1, type=int)
+
+    questions = Question.query.filter_by(id=id).join(
       Category,
-      Category.id == Question.category
+      Category.id == Question.id
     ).add_columns(Category.type).all()
 
     current_questions = paginate_questions(page, questions)
 
-    if len(current_questions) == 0:
-      abort(404, 'Not found.')
+    # if len(current_questions) == 0:
+    #   abort(404, 'Not found.')
     
-    category = Category.query.filter_by(category_id=Category.id).first()
+    category = Category.query.filter_by(id=id).first()
     categories = []
 
     results = Category.query.all()
@@ -242,7 +244,7 @@ def create_app(test_config=None):
       'questions': current_questions,
       'total_questions': len(questions),
       'categories': categories,
-      'Avaliable_category': category.type
+      'Avaliable_category': result.type
     }), 200
 
 
@@ -262,23 +264,23 @@ def create_app(test_config=None):
 
     data  = request.get_json()
 
+    category = data['category']
+
     questions = Question.query.filter_by(
-      categroy=data.get('quiz_category')['id']
-    ).filter(Question.id.notin__(data.get('previous_questions'))).all()
+      int(category=category['id'])).filter(Question.id.notin__data['previous_questions']).all()
 
-    if data.get('quiz_category')['id'] == 0:
+    if category['id'] == 0:
       questions = Question.query.filter(
-        Question.id.notin_(data.get('previous_questions'))
-      ).all()
+        Question.id.notin_(data['previous_questions'])).all()
 
-      question = None
-      if questions:
-        question = random.choice(questions).format()
+    question = None
+    if questions:
+      question = random.choice(questions).format()
 
       return jsonify({
         'sucess': True,
         'question':question
-      }), 200
+      }), 201
 
   '''
   @TODO: 
