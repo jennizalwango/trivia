@@ -90,16 +90,18 @@ def create_app(test_config=None):
     ).add_columns(Category.type).all()
 
     current_questions = paginate_questions(page, questions)
+    # print(current_questions)
 
     categories = []
 
-    results = Category.query.all()
+    
 
-    for  result in results:
+    for  result in Category.query.all():
       categories.append(result.type)
+  
 
-    # if len(current_questions) ==0:
-    #   abort(404, "Sorry no question found")
+    if len(current_questions) ==0:
+      abort(404, "Sorry no question found")
 
     return jsonify({
       'sucess': True,
@@ -146,10 +148,10 @@ def create_app(test_config=None):
   def create_question():
     data = request.get_json()
 
-    question = data.get('question', None)
-    category = data.get('categroy', None)
-    answer = int(data.get('answer', None))
-    difficulty = int(data.get('difficulty', None))
+    question = data['question']
+    category = int(data['category'])
+    answer = data['answer']
+    difficulty = int(data['difficulty'])
 
     question = Question(
       answer=answer, 
@@ -267,7 +269,7 @@ def create_app(test_config=None):
     category = data['category']
 
     questions = Question.query.filter_by(
-      int(category=category['id'])).filter(Question.id.notin__data['previous_questions']).all()
+      category=category['id']).filter(Question.id.notin__data['previous_questions']).all()
 
     if category['id'] == 0:
       questions = Question.query.filter(
