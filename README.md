@@ -209,6 +209,69 @@ GET '/categories/<int:id>/questions'
   "total_questions": 2
 }
 
+POST '/question/search'
+Fetches questions that have th e search term
+- Request Arguments: None
+- Returns: An object with: 
+    - list of questions
+    - Total number of questions
+    - list of categories
+    - current category
+- status code: 200
+
+- sample post data : 
+{
+	"searchTerm": "name"
+}
+
+
+{
+  "categories": [
+    "Science",
+    "Art",
+    "Geography",
+    "History",
+    "Entertainment",
+    "Sports"
+  ],
+  "current_category": null,
+  "questions": [
+    {
+      "answer": "Muhammad Ali",
+      "category": "History",
+      "category_id": 4,
+      "difficulty": 1,
+      "id": 9,
+      "question": "What boxer's original name is Cassius Clay?"
+    },
+    {
+      "answer": "Brazil",
+      "category": "Sports",
+      "category_id": 6,
+      "difficulty": 3,
+      "id": 10,
+      "question": "Which is the only team to play in every soccer World Cup tournament?"
+    }
+  ],
+  "success": true,
+  "total_questions": 2
+}
+
+POST '/quizzes'
+Fetches a list of questions based on selected category in which the keys are the ids and the value is the corresponding string of the category
+- Request Arguments: None
+- Returns: An object with 2 keys,
+  - success that contains a boolean that indicates success/failure of the request.
+  - question that contains a question to display next.
+- status code: 200
+
+satus code used and the meaning
+200- Ok
+201- created
+400- Bad request
+404- Not found
+422 - Unprocessable
+
 
 ```
 
