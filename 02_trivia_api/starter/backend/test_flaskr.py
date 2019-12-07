@@ -15,13 +15,14 @@ class TriviaTestCase(unittest.TestCase):
         self.app = create_app()
         self.client = self.app.test_client
         self.database_name = "trivia_test"
-        self.database_path = 'postgres://{}:{}@{}/{}'.format('postgres', 'jenny', '127.0.0.1:5432', self.database_name)
+        self.database_path = 'postgres://{}:{}@{}/{}'.format(
+            'postgres', 'jenny', '127.0.0.1:5432', self.database_name)
         setup_db(self.app, self.database_path)
         self.question = {
-            'question':'question',
+            'question': 'question',
             'answer': 8,
-            'category': 1,
-            'difficulty':2
+            'category': "science",
+            'difficulty': 2
         }
 
         # binds the app to the current context
@@ -30,7 +31,7 @@ class TriviaTestCase(unittest.TestCase):
             self.db.init_app(self.app)
             # create all tables
             self.db.create_all()
-    
+
     def tearDown(self):
         """Executed after reach test"""
         pass
@@ -48,35 +49,44 @@ class TriviaTestCase(unittest.TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertEqual(data['sucess'], True)
 
-
     def test_get_all_categories_with_wrong_url(self):
         response = self.client().get('/categor')
         self.assertEqual(response.status_code, 404)
 
     def test_failure_to_create_question(self):
-        response = self.client().post('/questionss', content_type='application/json', data=json.dumps(self.question))
+        response = self.client().post('/questionss', content_type='application/json',
+                                      data=json.dumps(self.question))
 
-        data= json.loads(response.data)
+        data = json.loads(response.data)
         self.assertEqual(response.status_code, 404)
 
-
     def test_successful_question_creation(self):
-        response = self.client().post('/questions', content_type='application/json', data=json.dumps(self.question))
+        response = self.client().post('/questions', content_type='application/json',
+                                      data=json.dumps(self.question))
 
-        data= json.loads(response.data)
+        data = json.loads(response.data)
         self.assertEqual(response.status_code, 201)
         self.assertEqual(data['success'], True)
-        self.assertEqual(data['meassge'], 'Question successfully created')
+        self.assertEqual(data['message'], 'Question successfully created')
 
     def test_successful_deletion(self):
-        res = self.client().post('/questions', content_type='application/json', data=json.dumps(self.question))
-        response = self.client().delete('/question/2')
+        res = self.client().post('/questions', content_type='application/json',
+                                 data=json.dumps(self.question))
+        response = self.client().delete('/questions/2')
         self.assertEqual(response.status_code, 200)
 
     def test_failure_to_delete(self):
-        res = self.client().post('/questions', content_type='application/json', data=json.dumps(self.question))
+        res = self.client().post('/questions', content_type='application/json',
+                                 data=json.dumps(self.question))
         response = self.client().delete('/question/j')
         self.assertEqual(response.status_code, 404)
+
+    def test_get_questions_with_wrong_url(self):
+        response = self.client().post('/categories/0/questions')
+
+        body = json.loads(response.data.decode())
+        self.assertEqual(response.status_code, 405)
+        self.assertEqual(body['message'], "method not allowed")
 
 
 # Make the tests conveniently executable
