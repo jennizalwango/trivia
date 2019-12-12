@@ -7,22 +7,18 @@ import random
 from models import setup_db, Question, Category
 
 
-def paginate_questions(page, selections):
+QUESTIONS_PER_PAGE = 10
 
-    QUESTIONS_PER_PAGE = 10
+
+def paginate_questions(request, selections):
 
     page = request.args.get('page', 1, type=int)
     start = (page - 1) * QUESTIONS_PER_PAGE
     end = start + QUESTIONS_PER_PAGE
 
-    allSelected = []
-    for Qnts, category in selections:
-        Qnts = Qnts.format()
-        Qnts['category_id'] = Qnts['category']
-        Qnts['category'] = category
-        allSelected.append(Qnts)
+    questions = [question.format() for question in selections]
 
-    current_questions = allSelected[start:end]
+    current_questions = questions[start:end]
 
     return current_questions
 
@@ -83,12 +79,9 @@ def create_app(test_config=None):
 
         page = request.args.get('page', 1, type=int)
 
-        questions = Question.query.join(
-            Category,
-            Category.id == Question.id
-        ).add_columns(Category.type).all()
+        questions = Question.query.all()
 
-        current_questions = paginate_questions(page, questions)
+        current_questions = paginate_questions(request, questions)
 
         categories = []
 
@@ -105,6 +98,7 @@ def create_app(test_config=None):
             'categories': categories,
             'current_category': "all"
         }), 200
+
     '''
   @TODO:Create an endpoint to DELETE question using a question ID.
   TEST: When you click the trash icon next to a question,
@@ -113,17 +107,15 @@ def create_app(test_config=None):
   '''
     @app.route('/questions/<int:id>', methods=['DELETE'])
     def delete_question(id):
-
-        question = Question.query.filter_by(id=id).one_or_none()
-
+        question = Question.query.filter(Question.id == id).one_or_none()
         if question is None:
             abort(404, 'sorry question not found')
-            question.delete()
+        question.delete()
 
         return jsonify({
             'success': True,
             'message': 'Question have benn sucessfully deleted',
-        })
+        }), 200
 
     '''
   @TODO:Create an endpoint to POST a new question,
@@ -170,32 +162,15 @@ def create_app(test_config=None):
 
         search_term = data.get("searchTerm")
 
-        page = request.args.get('page', 1, type=int)
+        questions = Question.query.order_by(Question.id).filter(
+                    Question.question.ilike('%{}%'.format(search_term))).all()
 
-        questions = Question.query.join(
-            Category, Category.id == Question.category
-        ).add_columns(Category.type).all()
-
-        current_questions = paginate_questions(page, questions)
-
-        questions = []
-        for question in current_questions:
-            if search_term.lower() in question['question'].lower():
-                questions.append(question)
-
-        categories = []
-
-        all_categories = Category.query.all()
-
-        for item in all_categories:
-            categories.append(item.type)
+        current_questions = paginate_questions(request, questions)
 
         return jsonify({
             'success': True,
-            'questions': questions,
-            'total_questions': len(questions),
-            'categories': categories,
-            'current_category': None
+            'questions': current_questions,
+            'total_questions': len(questions)
         }), 200
 
     '''@TODO:Create a GET endpoint to get questions based on category.
@@ -207,26 +182,23 @@ def create_app(test_config=None):
 
         page = request.args.get('page', 1, type=int)
 
-        questions = Question.query.filter_by(id=id).join(
-            Category,
-            Category.id == Question.id
-        ).add_columns(Category.type).all()
+        questions = Question.query.filter(Question.category == str(id)).all()
 
-        current_questions = paginate_questions(page, questions)
+        current_questions = paginate_questions(request, questions)
 
-        category = Category.query.filter_by(id=id).first()
+        category = Category.query.filter(Category.id == str(id)).one_or_none()
+
         categories = []
 
-        results = Category.query.all()
-        for result in results:
-            categories.append(result.type)
+        for cate in Category.query.all():
+            categories.append(cate.type)
 
         return jsonify({
             'sucess': True,
             'questions': current_questions,
             'total_questions': len(questions),
             'categories': categories,
-            'Avaliable_category': result.type
+            'current_category': category.type
         }), 200
 
     '''@TODO:Create a POST endpoint to get questions to play the quiz.
