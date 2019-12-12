@@ -20,9 +20,12 @@ class TriviaTestCase(unittest.TestCase):
         setup_db(self.app, self.database_path)
         self.question = {
             'question': 'question',
-            'answer': 8,
-            'category': "science",
+            'answer': "okay",
+            'category': "1",
             'difficulty': 2
+        }
+        self.searchData = {
+            'searchTerm': 'u'
         }
 
         # binds the app to the current context
@@ -36,10 +39,8 @@ class TriviaTestCase(unittest.TestCase):
         """Executed after reach test"""
         pass
 
-    """
-    TODO
-    Write at least one test for each test for successful operation and for expected errors.
-    """
+    """TODO Write at least one test for each test for
+    successful operation and for expected errors."""
 
     def test_get_all_categories_sucess(self):
 
@@ -49,20 +50,24 @@ class TriviaTestCase(unittest.TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertEqual(data['sucess'], True)
 
-    def test_get_all_categories_with_wrong_url(self):
+    def test_get_all_categories_failure(self):
         response = self.client().get('/categor')
         self.assertEqual(response.status_code, 404)
 
     def test_failure_to_create_question(self):
-        response = self.client().post('/questionss', content_type='application/json',
+        response = self.client().post('/questionss',
+                                      content_type='application/json',
                                       data=json.dumps(self.question))
 
         data = json.loads(response.data)
         self.assertEqual(response.status_code, 404)
 
     def test_successful_question_creation(self):
-        response = self.client().post('/questions', content_type='application/json',
-                                      data=json.dumps(self.question))
+        response = self.client().post('/questions',
+                                      json={'question': 'Sample question?',
+                                            'answer': 'Sample answer.',
+                                            'difficulty': 2,
+                                            'category': '1'})
 
         data = json.loads(response.data)
         self.assertEqual(response.status_code, 201)
@@ -70,23 +75,53 @@ class TriviaTestCase(unittest.TestCase):
         self.assertEqual(data['message'], 'Question successfully created')
 
     def test_successful_deletion(self):
-        res = self.client().post('/questions', content_type='application/json',
+        res = self.client().post('/questions',
+                                 content_type='application/json',
                                  data=json.dumps(self.question))
-        response = self.client().delete('/questions/2')
+        response = self.client().delete('/questions/11')
         self.assertEqual(response.status_code, 200)
 
     def test_failure_to_delete(self):
-        res = self.client().post('/questions', content_type='application/json',
+        res = self.client().post('/questions',
+                                 content_type='application/json',
                                  data=json.dumps(self.question))
         response = self.client().delete('/question/j')
         self.assertEqual(response.status_code, 404)
 
-    def test_get_questions_with_wrong_url(self):
-        response = self.client().post('/categories/0/questions')
+    def test_retrive_questions_by_category_success(self):
+        response = self.client().get('categories/1/questions')
+        self.assertEqual(response.status_code, 200)
 
-        body = json.loads(response.data.decode())
+    def test_retrive_questions_by_category_with_wrong_url(self):
+        response = self.client().post('/categoriess/0/questions')
+        self.assertEqual(response.status_code, 404)
+
+    def test_search_questions(self):
+        response = self.client().post('/questions/search',
+                                      content_type='application/json',
+                                      data=json.dumps(self.searchData))
+
+        self.assertEqual(response.status_code, 200)
+
+    def test_search_with_wrong_url(self):
+        sample_data2 = {"search_term": "name"}
+        response = self.client().post('/questions/searchs',
+                                      content_type='application/json',
+                                      data=json.dumps(sample_data2))
+
+        self.assertEqual(response.status_code, 404)
+
+    def test_retrive_questions_sucess(self):
+        response = self.client().get('/questions',
+                                     content_type='application/json')
+        data = json.loads(response.data)
+        print(data)
+        self.assertEqual(response.status_code, 200)
+
+    def test_retrive_questions_failure(self):
+        response = self.client().patch('/questions')
+
         self.assertEqual(response.status_code, 405)
-        self.assertEqual(body['message'], "method not allowed")
 
 
 # Make the tests conveniently executable
